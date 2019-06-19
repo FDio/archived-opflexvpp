@@ -1,0 +1,75 @@
+#
+# Copyright (c) 2018 Cisco Systems, Inc. and others.  All rights reserved.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Eclipse Public License v1.0 which accompanies this distribution,
+# and is available at http://www.eclipse.org/legal/epl-v10.html
+#
+
+%{!?gitversion:%define gitversion %(git describe | sed -e 's/-/_/g')}
+%{!?packageversion:%define packageversion @VERSION@}
+%{!?buildversion:%define buildversion @BVERSION@}
+%global _hardened_build 1
+
+Name: renderer-vpp
+Epoch: 1
+Version: %{packageversion}
+Release: %{gitversion}_%{buildversion}%{?dist}
+Summary: VPP renderer module for OpFlex Agent
+
+Group: System Environment/Daemons
+License: EPLv1.0
+URL: https://github.com/opflex-vpp/vpp-renderer
+
+BuildRoot: %{_tmppath}/%{name}-%{version}-root
+Source: %{name}-%{version}.tar.gz
+Requires: opflex-agent = %{epoch}:@libopflex_agent_VERSION@
+Requires: vpp-devel >= 19.01
+Requires: vpp-lib >= 19.01
+BuildRequires: opflex-agent-devel
+BuildRequires: vpp-devel
+BuildRequires: vpp-lib
+BuildRequires: vpp-plugins
+Requires(post): /sbin/ldconfig
+Requires(postun): /sbin/ldconfig
+Requires(post): systemd-units
+Requires(postun): systemd-units
+
+%description
+The vpp renderer provides a loadable module that demonstrates
+the basic structure of an OpFlex agent renderer plugin,
+
+%prep
+%setup -q
+
+%build
+%configure --disable-assert
+make %{?_smp_mflags}
+
+%install
+%make_install
+
+%check
+%if %{with check}
+    make check
+%endif
+
+%post
+/bin/systemctl daemon-reload >dev/null || :
+
+%postun
+/bin/systemctl daemon-reload >dev/null || :
+
+#%define _unpackaged_files_terminate_build 0
+
+%files
+%defattr(-,root,root)
+%{_libdir}/libopflex_agent_renderer_vpp.so*
+%{_libdir}/libopflex_agent_renderer_vpp.la
+%dir %{_sysconfdir}/opflex-agent-ovs/plugins.conf.d
+%config(noreplace) %{_sysconfdir}/opflex-agent-ovs/plugins.conf.d/plugin-renderer-vpp.conf
+
+%changelog
+* Fri Apr 13 2018 Mohsin Kazmi <sykazmi@cisco.com> - 1:1.0.0
+* Wed Nov 7  2018 Neale Ranns <nranns@cisco.com> - 1:1.1.0
+- New package file
