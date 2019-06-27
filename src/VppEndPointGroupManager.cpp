@@ -195,7 +195,7 @@ EndPointGroupManager::mk_mcast_tunnel(Runtime &r,
     igmp_binding igmp_b(*r.uplink.local_interface());
     OM::write(key, igmp_b);
 
-    igmp_listen igmp_l(igmp_b, dst.to_v4());
+    igmp_listen igmp_l(igmp_b, dst.to_v4(), {r.uplink.local_address().to_v4()});
     OM::write(key, igmp_l);
 
     return (vt.singular());

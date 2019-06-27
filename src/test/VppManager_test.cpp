@@ -1205,7 +1205,7 @@ BOOST_FIXTURE_TEST_CASE(trans_endpoint_group_add_del,
 
     igmp_binding igmp_b(v_sub);
     WAIT_FOR_MATCH(igmp_b);
-    WAIT_FOR_MATCH(igmp_listen(igmp_b, bd_mcast.to_v4()));
+    WAIT_FOR_MATCH(igmp_listen(igmp_b, bd_mcast.to_v4(), {host.to_v4()}));
 
     removeEpg(epg0);
     vppManager.egDomainUpdated(epg0->getURI());
@@ -1267,7 +1267,7 @@ BOOST_FIXTURE_TEST_CASE(ext_itf, VppTransportManagerFixture)
     WAIT_FOR_MATCH(*vt_bd_mcast);
     igmp_binding igmp_b(v_sub);
     WAIT_FOR_MATCH(igmp_b);
-    WAIT_FOR_MATCH(igmp_listen(igmp_b, bd_mcast.to_v4()));
+    WAIT_FOR_MATCH(igmp_listen(igmp_b, bd_mcast.to_v4(), {host.to_v4()}));
 
     gbp_bridge_domain *v_gbd =
         new gbp_bridge_domain(v_bd, v_bvi, {}, vt_bd_mcast);
