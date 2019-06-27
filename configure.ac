@@ -56,7 +56,7 @@ AC_STDC_HEADERS
 PKG_CHECK_MODULES([libopflex_agent], [libopflex_agent >= 1.7.0])
 AC_SUBST(libopflex_agent_VERSION, [$($PKG_CONFIG --modversion libopflex_agent)])
 # Check for VPP libraries
-AC_CHECK_LIB([svm], [svm_fifo_segment_create], [],
+AC_CHECK_LIB([svm], [fifo_segment_create], [],
              [AC_MSG_ERROR([SVM not found])])
 AC_CHECK_LIB([vppinfra], [clib_calljmp], [],
              [AC_MSG_ERROR([vppinfra not found])])
