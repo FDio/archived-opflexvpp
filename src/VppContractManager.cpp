@@ -21,24 +21,26 @@
 #include <vom/om.hpp>
 
 #include "VppContractManager.hpp"
+#include "VppEndPointGroupManager.hpp"
 #include "VppLog.hpp"
+#include "VppRuntime.hpp"
 
 using namespace VOM;
 
 namespace VPP
 {
-ContractManager::ContractManager(opflexagent::Agent &agent, IdGen &id_gen)
-    : m_agent(agent)
-    , m_id_gen(id_gen)
+ContractManager::ContractManager(Runtime &r)
+    : m_runtime(r)
 {
 }
 
 static void
-get_group_sclass(opflexagent::Agent &agent,
+get_group_sclass(Runtime &runtime,
                  const std::unordered_set<opflex::modb::URI> &uris,
-                 std::unordered_set<uint32_t> &ids)
+                 std::vector<uint32_t> &ids)
 {
-    opflexagent::PolicyManager &pm = agent.getPolicyManager();
+    opflexagent::PolicyManager &pm = runtime.policy_manager();
+
     for (auto &u : uris)
     {
         boost::optional<uint32_t> sclass = pm.getSclassForGroup(u);
@@ -49,11 +51,34 @@ get_group_sclass(opflexagent::Agent &agent,
         }
         if (sclass)
         {
-            ids.insert(sclass.get());
+            ids.push_back(sclass.get());
         }
         else
         {
             VLOGW << "No Sclass for: " << u;
+        }
+    }
+}
+
+static void
+get_group_scope_sclass(Runtime &runtime,
+                       const std::unordered_set<opflex::modb::URI> &uris,
+                       std::vector<std::pair<uint16_t, uint32_t>> &ids)
+{
+    opflexagent::PolicyManager &pm = runtime.policy_manager();
+
+    for (auto &u : uris)
+    {
+        try
+        {
+            EndPointGroupManager::ForwardInfo fwd =
+                EndPointGroupManager::get_fwd_info(runtime, u);
+
+            ids.push_back(std::make_pair(fwd.rdId, fwd.sclass));
+        }
+        catch (EndPointGroupManager::NoFowardInfoException &e)
+        {
+            VLOGW << "No RD for: " << u;
         }
     }
 }
@@ -94,7 +119,7 @@ ContractManager::handle_update(const opflex::modb::URI &uri)
 
     OM::mark_n_sweep ms(uuid);
 
-    opflexagent::PolicyManager &polMgr = m_agent.getPolicyManager();
+    opflexagent::PolicyManager &polMgr = m_runtime.policy_manager();
     if (!polMgr.contractExists(uri))
     {
         // Contract removed
@@ -108,12 +133,11 @@ ContractManager::handle_update(const opflex::modb::URI &uri)
     polMgr.getContractConsumers(uri, consURIs);
     polMgr.getContractIntra(uri, intraURIs);
 
-    typedef std::unordered_set<uint32_t> id_set_t;
-    id_set_t provIds;
-    id_set_t consIds;
+    std::vector<std::pair<uint16_t, uint32_t>> provIds;
+    std::vector<uint32_t> consIds;
 
-    get_group_sclass(m_agent, provURIs, provIds);
-    get_group_sclass(m_agent, consURIs, consIds);
+    get_group_scope_sclass(m_runtime, provURIs, provIds);
+    get_group_sclass(m_runtime, consURIs, consIds);
 
     opflexagent::PolicyManager::rule_list_t rules;
     polMgr.getContractRules(uri, rules);
@@ -194,10 +218,11 @@ ContractManager::handle_update(const opflex::modb::URI &uri)
                 uint8_t macAddr[6] = {0};
                 dst->getMac().toUIntArray(macAddr);
                 mac_address_t mac(macAddr);
-                gbp_rule::next_hop_t nh(dst->getIp(),
-                                        mac,
-                                        getBdId(m_id_gen, dst->getBD()),
-                                        getRdId(m_id_gen, dst->getRD()));
+                gbp_rule::next_hop_t nh(
+                    dst->getIp(),
+                    mac,
+                    getBdId(m_runtime.id_gen, dst->getBD()),
+                    getRdId(m_runtime.id_gen, dst->getRD()));
                 nhs.insert(nh);
             }
             if (nhs.size() == 0)
@@ -249,22 +274,31 @@ ContractManager::handle_update(const opflex::modb::URI &uri)
         }
     }
 
-    for (const uint32_t &pvnid : provIds)
+    for (const auto pvnid : provIds)
     {
         for (const uint32_t &cvnid : consIds)
         {
-            if (pvnid == cvnid) /* intra group is allowed by default */
+            if (pvnid.second == cvnid) /* intra group is allowed by default */
                 continue;
 
-            VLOGD << "Contract prov:" << pvnid << " cons:" << cvnid;
+            /*
+             * Derive the contract scope from the provider's RD
+             */
+            VLOGD << "Contract prov:[" << pvnid.first << ", " << pvnid.second
+                  << "]"
+                  << " cons:" << cvnid;
 
             if (!in_rules.empty())
             {
                 ACL::l3_list inAcl(uuid + "in", in_rules);
                 OM::write(uuid, inAcl);
 
-                gbp_contract gbpc_in(
-                    pvnid, cvnid, inAcl, gbp_rules, in_ethertypes);
+                gbp_contract gbpc_in(pvnid.first,
+                                     pvnid.second,
+                                     cvnid,
+                                     inAcl,
+                                     gbp_rules,
+                                     in_ethertypes);
                 OM::write(uuid, gbpc_in);
             }
             if (!out_rules.empty())
@@ -272,8 +306,12 @@ ContractManager::handle_update(const opflex::modb::URI &uri)
                 ACL::l3_list outAcl(uuid + "out", out_rules);
                 OM::write(uuid, outAcl);
 
-                gbp_contract gbpc_out(
-                    cvnid, pvnid, outAcl, gbp_rules, out_ethertypes);
+                gbp_contract gbpc_out(pvnid.first,
+                                      cvnid,
+                                      pvnid.second,
+                                      outAcl,
+                                      gbp_rules,
+                                      out_ethertypes);
                 OM::write(uuid, gbpc_out);
             }
         }

@@ -12,7 +12,7 @@
 
 #include <opflexagent/Agent.h>
 
-#include "VppIdGen.hpp"
+#include "VppRuntime.hpp"
 
 #include <vom/acl_l3_rule.hpp>
 
@@ -21,16 +21,15 @@ namespace VPP
 class ContractManager
 {
   public:
-    ContractManager(opflexagent::Agent &agent, IdGen &id_gen);
+    ContractManager(Runtime &r);
 
     void handle_update(const opflex::modb::URI &uri);
 
   private:
     /**
-     * Referene to the uber-agent
+     * Referene to runtime data.
      */
-    opflexagent::Agent &m_agent;
-    IdGen &m_id_gen;
+    Runtime &m_runtime;
 };
 
 extern void setParamUpdate(modelgbp::gbpe::L24Classifier &cls,

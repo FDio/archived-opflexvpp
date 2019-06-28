@@ -14,7 +14,7 @@
 
 #include <modelgbp/gbp/L3ExternalDomain.hpp>
 
-#include <vom/route_domain.hpp>
+#include <vom/gbp_route_domain.hpp>
 
 #include "VppRuntime.hpp"
 
@@ -30,7 +30,7 @@ class RouteManager
 
     static void
     mk_ext_nets(Runtime &runtime,
-                route_domain &rd,
+                gbp_route_domain &rd,
                 const opflex::modb::URI &uri,
                 std::shared_ptr<modelgbp::gbp::L3ExternalDomain> ext_dom);
 

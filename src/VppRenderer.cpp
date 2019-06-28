@@ -300,10 +300,10 @@ VppRenderer::stop()
     vppManager->stop();
 }
 
-boost::asio::ip::address VppRenderer::getUplinkAddress()
+boost::asio::ip::address
+VppRenderer::getUplinkAddress()
 {
-    const boost::asio::ip::address addr =
-        vppManager->uplink().local_address();
+    const boost::asio::ip::address addr = vppManager->uplink().local_address();
     return addr;
 }
 
