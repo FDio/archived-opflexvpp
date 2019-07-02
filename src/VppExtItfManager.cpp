@@ -111,11 +111,11 @@ ExtItfManager::handle_update(const opflex::modb::URI &uri)
     /*
      * there's no leanring of EPs in an external BD
      */
-    gbp_bridge_domain gbd(
-        bd, *bvi, {}, vt_mc, gbp_bridge_domain::flags_t::DO_NOT_LEARN);
-    OM::write(uuid, gbd);
     std::shared_ptr<VOM::gbp_route_domain> grd =
         EndPointGroupManager::mk_gbp_rd(m_runtime, uuid, rd, rd_vnid.get());
+    gbp_bridge_domain gbd(
+        bd, *grd, *bvi, {}, vt_mc, gbp_bridge_domain::flags_t::DO_NOT_LEARN);
+    OM::write(uuid, gbd);
 
     /*
      * the encap on the external-interface is a vlan ID
@@ -176,7 +176,7 @@ ExtItfManager::handle_update(const opflex::modb::URI &uri)
         return;
     }
 
-    RouteManager::mk_ext_nets(m_runtime, rd, uri, ext_dom.get());
+    RouteManager::mk_ext_nets(m_runtime, *grd, uri, ext_dom.get());
 }
 
 }; // namepsace VPP

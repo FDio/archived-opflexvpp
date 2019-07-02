@@ -73,7 +73,7 @@ VppManager::start()
     m_epm = std::make_shared<EndPointManager>(m_runtime);
     m_epgm = std::make_shared<EndPointGroupManager>(m_runtime);
     m_sgm = std::make_shared<SecurityGroupManager>(m_runtime.agent);
-    m_cm = std::make_shared<ContractManager>(m_runtime.agent, m_runtime.id_gen);
+    m_cm = std::make_shared<ContractManager>(m_runtime);
     m_rdm = std::make_shared<RouteManager>(m_runtime);
     m_eim = std::make_shared<ExtItfManager>(m_runtime);
 

@@ -259,11 +259,11 @@ EndPointGroupManager::mk_gbp_rd(Runtime &r,
         vt_v4 = spine_proxy->mk_v4(key, vnid);
         vt_v6 = spine_proxy->mk_v6(key, vnid);
 
-        grd = std::make_shared<gbp_route_domain>(rd, vt_v4, vt_v6);
+        grd = std::make_shared<gbp_route_domain>(rd, rd.key(), vt_v4, vt_v6);
     }
     else
     {
-        grd = std::make_shared<gbp_route_domain>(rd);
+        grd = std::make_shared<gbp_route_domain>(rd, rd.key());
     }
 
     OM::write(key, *grd);
@@ -426,7 +426,7 @@ EndPointGroupManager::mk_group(Runtime &runtime,
                  * construct a BD that uses the MAC spine proxy as the
                  * UU-fwd interface
                  */
-                gbp_bridge_domain gbd(bd, bvi, vt_mac, vt_mc, gbd_flags);
+                gbp_bridge_domain gbd(bd, *grd, bvi, vt_mac, vt_mc, gbd_flags);
                 OM::write(key, gbd);
 
                 /*
@@ -468,11 +468,12 @@ EndPointGroupManager::mk_group(Runtime &runtime,
             }
             OM::write(key, l2_upl);
 
-            gbp_bridge_domain gbd(bd, *bvi);
-            OM::write(key, gbd);
-
-            gbp_route_domain grd(rd);
+            /* Use the generated RD ID as a unique scope */
+            gbp_route_domain grd(rd, rd.key());
             OM::write(key, grd);
+
+            gbp_bridge_domain gbd(bd, grd, *bvi);
+            OM::write(key, gbd);
 
             gepg = std::make_shared<gbp_endpoint_group>(
                 fwd.vnid, fwd.sclass, *encap_link, grd, gbd);
@@ -521,8 +522,7 @@ EndPointGroupManager::handle_update(const opflex::modb::URI &epgURI)
         std::shared_ptr<interface> bvi = gepg->get_bridge_domain()->get_bvi();
         std::shared_ptr<bridge_domain> bd =
             gepg->get_bridge_domain()->get_bridge_domain();
-        std::shared_ptr<route_domain> rd =
-            gepg->get_route_domain()->get_route_domain();
+        std::shared_ptr<gbp_route_domain> grd = gepg->get_route_domain();
 
         /*
          * The BVI is the NAT inside interface for the VMs
@@ -573,7 +573,7 @@ EndPointGroupManager::handle_update(const opflex::modb::URI &epgURI)
             route::prefix_t pfx(sn->getAddress().get(),
                                 sn->getPrefixLen().get());
 
-            gbp_subnet gs(*rd,
+            gbp_subnet gs(*grd,
                           pfx.low(),
                           (gepg->get_route_domain()->get_ip4_uu_fwd()
                                ? gbp_subnet::type_t::TRANSPORT

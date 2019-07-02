@@ -99,7 +99,7 @@ get_rd_subnets(opflexagent::Agent &agent, const opflex::modb::URI &uri)
 void
 RouteManager::mk_ext_nets(
     Runtime &runtime,
-    route_domain &rd,
+    gbp_route_domain &rd,
     const opflex::modb::URI &uri,
     std::shared_ptr<modelgbp::gbp::L3ExternalDomain> ext_dom)
 {
@@ -233,7 +233,7 @@ RouteManager::handle_domain_update(const opflex::modb::URI &uri)
 
     for (std::shared_ptr<modelgbp::gbp::L3ExternalDomain> ext_dom : extDoms)
     {
-        mk_ext_nets(m_runtime, rd, uri, ext_dom);
+        mk_ext_nets(m_runtime, *v_grd, uri, ext_dom);
     }
 }
 
