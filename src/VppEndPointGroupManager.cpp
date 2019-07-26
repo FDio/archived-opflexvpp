@@ -229,12 +229,6 @@ EndPointGroupManager::mk_bvi(Runtime &r,
     OM::write(key, *bvi);
 
     /*
-     * Add the BVI to the BD
-     */
-    l2_binding l2_bvi(*bvi, bd);
-    OM::write(key, l2_bvi);
-
-    /*
      * the bridge is not in learning mode. So add an L2FIB entry for the BVI
      */
     bridge_domain_entry be(bd, bvi->l2_address().to_mac(), *bvi);
@@ -406,8 +400,6 @@ EndPointGroupManager::mk_group(Runtime &runtime,
 
                 vt_mc = mk_mcast_tunnel(
                     runtime, key, bd_vnid.get(), bd_mcast.get());
-                l2_binding l2_vxbd(*vt_mc, bd);
-                OM::write(key, l2_vxbd);
 
                 std::shared_ptr<VOM::gbp_route_domain> grd =
                     mk_gbp_rd(runtime, key, rd, rd_vnid.get());

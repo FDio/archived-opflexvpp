@@ -736,11 +736,6 @@ BOOST_FIXTURE_TEST_CASE(endpoint_group_add_del, VppStitchedManagerFixture)
     WAIT_FOR_MATCH(*v_bvi_epg0);
 
     /*
-     * the BVI is put in the bridge-domain
-     */
-    WAIT_FOR_MATCH(l2_binding(*v_bvi_epg0, v_bd_epg0));
-
-    /*
      * The EPG uplink interface, also bound to BD=1
      */
     interface v_phy("opflex-itf",
@@ -1215,7 +1210,6 @@ BOOST_FIXTURE_TEST_CASE(trans_endpoint_group_add_del,
     vxlan_tunnel vt_bd_mcast(
         host, bd_mcast, 0xAA, v_sub, vxlan_tunnel::mode_t::GBP_L2);
     WAIT_FOR_MATCH(vt_bd_mcast);
-    WAIT_FOR_MATCH(l2_binding(vt_bd_mcast, v_bd));
 
     igmp_binding igmp_b(v_sub);
     WAIT_FOR_MATCH(igmp_b);
