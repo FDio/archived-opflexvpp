@@ -50,6 +50,9 @@
 #include <vom/route_domain.hpp>
 #include <vom/stat_reader.hpp>
 #include <vom/sub_interface.hpp>
+#include <vom/qos_map.hpp>
+#include <vom/qos_mark.hpp>
+#include <vom/qos_record.hpp>
 
 #include "VppManager.hpp"
 #include "opflexagent/test/ModbFixture.h"
@@ -237,9 +240,9 @@ print_obj(const T &obj, const std::string &s)
 }
 
 #define WAIT_FOR_MATCH(obj)                                                    \
-    WAIT_FOR_ONFAIL(is_match(obj), 1000, print_obj(obj, "Not Found: "))
+    WAIT_FOR_ONFAIL(is_match(obj), 10, print_obj(obj, "Not Found: "))
 #define WAIT_FOR_NOT_PRESENT(obj)                                              \
-    WAIT_FOR_ONFAIL(!is_present(obj), 1000, print_obj(obj, "Still present: "))
+    WAIT_FOR_ONFAIL(!is_present(obj), 10, print_obj(obj, "Still present: "))
 
 class VppManagerFixture : public ModbFixture
 {
@@ -560,7 +563,7 @@ class VppManagerFixture : public ModbFixture
         WAIT_FOR_MATCH(v_sub);
 
         std::string fqdn = boost::asio::ip::host_name();
-        WAIT_FOR_MATCH(dhcp_client(v_sub, fqdn));
+        WAIT_FOR_MATCH(dhcp_client(v_sub, fqdn, true, ip_dscp_t(5)));
         WAIT_FOR_MATCH(lldp_global(fqdn, 5, 2));
         WAIT_FOR_MATCH(lldp_binding(v_phy, "uplink-interface"));
 
@@ -695,9 +698,19 @@ BOOST_FIXTURE_TEST_CASE(start, VppStitchedManagerFixture)
     WAIT_FOR_MATCH(v_sub);
 
     std::string fqdn = boost::asio::ip::host_name();
-    WAIT_FOR_MATCH(dhcp_client(v_sub, fqdn));
+    WAIT_FOR_MATCH(dhcp_client(v_sub, fqdn, true, ip_dscp_t(5)));
     WAIT_FOR_MATCH(lldp_global(fqdn, 5, 2));
     WAIT_FOR_MATCH(lldp_binding(v_phy, "uplink-interface"));
+
+    QoS::map::outputs_t outputs;
+    for (int ii = 0; ii < 4; ii++)
+    {
+        for (int jj = 0; jj < 256; jj++)
+         {
+             outputs[ii][jj] = 5;
+         }
+    }
+    WAIT_FOR_MATCH(QoS::map(1, outputs));
 }
 
 BOOST_FIXTURE_TEST_CASE(endpoint_group_add_del, VppStitchedManagerFixture)

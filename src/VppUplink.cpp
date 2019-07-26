@@ -22,6 +22,9 @@
 #include "vom/neighbour.hpp"
 #include "vom/sub_interface.hpp"
 #include <vom/bond_group_binding.hpp>
+#include <vom/qos_mark.hpp>
+#include <vom/qos_map.hpp>
+#include <vom/qos_record.hpp>
 
 #include "VppSpineProxy.hpp"
 #include "VppUplink.hpp"
@@ -31,6 +34,11 @@ using namespace VOM;
 
 namespace VPP
 {
+
+/**
+ * THe DSCP and VLAN CoS value opflex wants for its control packets
+ */
+const static u8 opflex_cp_dscp = 5;
 
 static const std::string UPLINK_KEY = "__uplink__";
 
@@ -111,6 +119,12 @@ Uplink::configure_tap(const route::prefix_t &pfx)
 
     ip_punt_redirect ipPunt(*m_subitf, itf, pfx.address());
     VOM::OM::write(UPLINK_KEY, ipPunt);
+
+    /**
+     * record the QoS bits for packets from the TAP
+     */
+    QoS::record qr(itf, QoS::source_t::IP);
+    OM::write(UPLINK_KEY, qr);
 }
 
 void
@@ -266,7 +280,8 @@ Uplink::configure(const std::string &fqdn)
      * Configure DHCP on the uplink subinterface
      * We must use the MAC address of the uplink interface as the DHCP client-ID
      */
-    dhcp_client dc(*m_subitf, hostname, m_uplink->l2_address(), true, this);
+    dhcp_client dc(*m_subitf, hostname, m_uplink->l2_address(), true,
+                   ip_dscp_t(opflex_cp_dscp), this);
     OM::write(UPLINK_KEY, dc);
 
     /**
@@ -287,6 +302,21 @@ Uplink::configure(const std::string &fqdn)
     {
         LOG(opflexagent::DEBUG) << "DHCP awaiting lease";
     }
+
+    /**
+     * set up the QoS marking for CP packets - VLAN CoS=5
+     */
+    QoS::map::outputs_t outputs;
+
+    for (auto &x : outputs)
+        for (auto &y : x)
+            y = opflex_cp_dscp;
+
+    QoS::map qem(1, outputs);
+    OM::write(UPLINK_KEY, qem);
+
+    QoS::mark qm(*m_subitf, qem, QoS::source_t::IP);
+    OM::write(UPLINK_KEY, qm);
 }
 
 void
