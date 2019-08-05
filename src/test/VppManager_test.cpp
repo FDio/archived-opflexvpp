@@ -52,7 +52,7 @@
 #include <vom/sub_interface.hpp>
 #include <vom/qos_map.hpp>
 #include <vom/qos_mark.hpp>
-#include <vom/qos_record.hpp>
+#include <vom/qos_store.hpp>
 
 #include "VppManager.hpp"
 #include "opflexagent/test/ModbFixture.h"
@@ -710,7 +710,23 @@ BOOST_FIXTURE_TEST_CASE(start, VppStitchedManagerFixture)
              outputs[ii][jj] = 5;
          }
     }
-    WAIT_FOR_MATCH(QoS::map(1, outputs));
+    QoS::map qem(1, outputs);
+    WAIT_FOR_MATCH(qem);
+    WAIT_FOR_MATCH(QoS::mark(v_sub, qem, QoS::source_t::IP));
+
+    /*
+     * complete the DHCP process and expect the TAP configs
+     */
+    do_dhcp();
+
+    host = boost::asio::ip::address::from_string("192.168.1.1");
+    route::prefix_t pfx(host, 24);
+    mac_address_t tap_mac("00:00:de:ad:be:ef");
+    interface *v_tap = new tap_interface("tap0",
+                                         interface::admin_state_t::UP,
+                                         pfx, tap_mac);
+    WAIT_FOR_MATCH(*v_tap);
+    WAIT_FOR_MATCH(QoS::store(*v_tap, QoS::source_t::IP, 5));
 }
 
 BOOST_FIXTURE_TEST_CASE(endpoint_group_add_del, VppStitchedManagerFixture)

@@ -24,7 +24,7 @@
 #include <vom/bond_group_binding.hpp>
 #include <vom/qos_mark.hpp>
 #include <vom/qos_map.hpp>
-#include <vom/qos_record.hpp>
+#include <vom/qos_store.hpp>
 
 #include "VppSpineProxy.hpp"
 #include "VppUplink.hpp"
@@ -38,7 +38,7 @@ namespace VPP
 /**
  * THe DSCP and VLAN CoS value opflex wants for its control packets
  */
-const static u8 opflex_cp_dscp = 5;
+const static QoS::bits_t opflex_cp_dscp = 5;
 
 static const std::string UPLINK_KEY = "__uplink__";
 
@@ -121,10 +121,10 @@ Uplink::configure_tap(const route::prefix_t &pfx)
     VOM::OM::write(UPLINK_KEY, ipPunt);
 
     /**
-     * record the QoS bits for packets from the TAP
+     * store the QoS bits for packets from the TAP
      */
-    QoS::record qr(itf, QoS::source_t::IP);
-    OM::write(UPLINK_KEY, qr);
+    QoS::store qs(itf, QoS::source_t::IP, opflex_cp_dscp);
+    OM::write(UPLINK_KEY, qs);
 }
 
 void
